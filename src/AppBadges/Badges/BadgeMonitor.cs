@@ -1,3 +1,4 @@
+using MacroDeck.Sdk.Logging;
 using Serilog;
 
 namespace AppBadges.Badges;
@@ -28,9 +29,9 @@ public sealed class BadgeMonitor : IDisposable
 	private readonly Lock _sync = new();
 	private readonly Dictionary<string, Watched> _watched = new(StringComparer.Ordinal);
 	private readonly ITimer _timer;
+	private readonly TimeProvider _time;
 
 	private int _polling;
-	private bool _failing;
 	private bool _disposed;
 
 	public BadgeMonitor(IBadgeReader reader, TimeProvider time, ILogger logger)
@@ -38,6 +39,7 @@ public sealed class BadgeMonitor : IDisposable
 		ArgumentNullException.ThrowIfNull(time);
 
 		_reader = reader;
+		_time = time;
 		_logger = logger.ForContext<BadgeMonitor>();
 		_timer = time.CreateTimer(_ => _ = PollAsync(), null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
 	}
@@ -139,27 +141,48 @@ public sealed class BadgeMonitor : IDisposable
 	private async Task ReadOneAsync(string bundleId)
 	{
 		AppBadge badge;
+		FailureEpisodeTracker failures;
+
+		lock (_sync)
+		{
+			if (!_watched.TryGetValue(bundleId, out var watched))
+			{
+				return;
+			}
+
+			failures = watched.Failures ??= new FailureEpisodeTracker(time: _time);
+		}
 
 		try
 		{
 			badge = await _reader.ReadAsync(bundleId, CancellationToken.None).ConfigureAwait(false);
-
-			if (_failing)
-			{
-				_failing = false;
-				_logger.Information("Reading app badges works again");
-			}
 		}
 		catch (Exception exception) when (exception is not OutOfMemoryException)
 		{
-			// Logged once per failure episode, not on every two-second poll.
-			if (!_failing)
+			// One episode per app, so a single failing app neither floods the log nor hides another's recovery.
+			var signal = failures.RecordFailure(exception.Message);
+
+			switch (signal.Kind)
 			{
-				_failing = true;
-				_logger.Warning(exception, "Could not read the badge of {BundleId}", bundleId);
+				case FailureEpisodeSignalKind.Onset:
+					_logger.Warning(exception, "Could not read the badge of {BundleId}", bundleId);
+					break;
+				case FailureEpisodeSignalKind.SummaryDue:
+					_logger.Warning("Reading the badge of {BundleId} has failed {Failures} times in {Duration}: {Error}",
+						bundleId, signal.ConsecutiveFailures, signal.Duration, signal.LastError);
+					break;
+				default:
+					_logger.Debug("Reading the badge of {BundleId} failed again: {Error}", bundleId, signal.LastError);
+					break;
 			}
 
 			return;
+		}
+
+		if (failures.RecordSuccess() is { } recovered)
+		{
+			_logger.Information("Reading the badge of {BundleId} works again after {Failures} failures",
+				bundleId, recovered.Failures);
 		}
 
 		lock (_sync)
@@ -172,7 +195,28 @@ public sealed class BadgeMonitor : IDisposable
 			watched.Badge = badge;
 		}
 
-		Changed?.Invoke(this, new BadgeChangedEventArgs(bundleId, badge));
+		Raise(new BadgeChangedEventArgs(bundleId, badge));
+	}
+
+	// The badge is already stored, so a throwing subscriber must not keep the others from hearing about it.
+	private void Raise(BadgeChangedEventArgs args)
+	{
+		if (Changed is not { } changed)
+		{
+			return;
+		}
+
+		foreach (var handler in changed.GetInvocationList().Cast<EventHandler<BadgeChangedEventArgs>>())
+		{
+			try
+			{
+				handler(this, args);
+			}
+			catch (Exception exception) when (exception is not OutOfMemoryException)
+			{
+				_logger.Warning(exception, "A tile failed to show the new badge of {BundleId}", args.BundleId);
+			}
+		}
 	}
 
 	private sealed class Watched
@@ -180,5 +224,7 @@ public sealed class BadgeMonitor : IDisposable
 		public int Count { get; set; } = 1;
 
 		public AppBadge? Badge { get; set; }
+
+		public FailureEpisodeTracker? Failures { get; set; }
 	}
 }
