@@ -1,0 +1,35 @@
+{
+  "$schema": "https://schemas.macro-deck.app/plugin-manifest-v1.schema.json",
+  "manifestVersion": 1,
+  "id": "com.ashrafabulsoud.app-badges",
+  "name": "App Badges",
+  "version": "1.0.0-beta.1",
+  "description": "Shows the unread badge of any macOS app, such as WhatsApp, Slack, Discord or Telegram, on a Macro Deck tile, and opens the app when tapped.",
+  "icon": "Assets/icon.svg",
+  "entrypoints": {
+    "osx-arm64": {
+      "executable": "runtimes/osx-arm64/AppBadges.dll",
+      "runtime": {
+        "kind": "FrameworkDependent",
+        "dotnetVersion": "10.0"
+      }
+    }
+  },
+  "publisher": {
+    "name": "ashrafabulsoud"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/ashrafabulsoud/macro-deck-app-badges",
+  "compatibility": {
+    "macroDeck": ">=3.0.0-0"
+  },
+  "permissions": [
+    "host:widget-types",
+    "process:spawn"
+  ],
+  "ai": {
+    "interaction": false,
+    "generatedContent": false,
+    "generatedAssets": true
+  }
+}
