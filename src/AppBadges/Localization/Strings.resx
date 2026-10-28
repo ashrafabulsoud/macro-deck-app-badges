@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- The default-language file. Every translation is checked against it and the fallback chain ends
+       here, so it is required even for a plugin that ships one language. Add a language by adding
+       Localization/Strings.<culture>.resx beside it (Strings.de.resx, Strings.pt-BR.resx).
+       A dotted key becomes a nested class: Actions.LogMessage.Name is Strings.Actions.LogMessage.Name(). -->
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Widget.Name" xml:space="preserve">
+    <value>App badge</value>
+  </data>
+  <data name="Widget.Description" xml:space="preserve">
+    <value>Shows an app's unread count like the Dock does, and opens the app when tapped. Works with WhatsApp, Slack, Discord, Telegram and any other app that shows a Dock badge.</value>
+  </data>
+  <data name="Face.ChooseApp" xml:space="preserve">
+    <value>Choose an app</value>
+  </data>
+  <data name="Face.ChooseAppHint" xml:space="preserve">
+    <value>Edit this widget to pick one</value>
+  </data>
+  <data name="Face.NotInstalled" xml:space="preserve">
+    <value>App not found</value>
+  </data>
+  <data name="Face.NotRunning" xml:space="preserve">
+    <value>Not running</value>
+  </data>
+  <data name="Face.SampleName" xml:space="preserve">
+    <value>Chat</value>
+  </data>
+  <data name="Config.App" xml:space="preserve">
+    <value>App</value>
+  </data>
+  <data name="Config.AppDescription" xml:space="preserve">
+    <value>The app whose Dock badge this tile shows. An app shows a badge only while it is running.</value>
+  </data>
+  <data name="Config.IconSize" xml:space="preserve">
+    <value>Icon size (%)</value>
+  </data>
+  <data name="Config.IconSizeDescription" xml:space="preserve">
+    <value>How much of the tile the app icon fills. Lower it to make room for a label.</value>
+  </data>
+  <data name="Config.BadgeHeading" xml:space="preserve">
+    <value>Message badge</value>
+  </data>
+  <data name="Config.BadgePosition" xml:space="preserve">
+    <value>Badge position</value>
+  </data>
+  <data name="Config.BadgePositionDescription" xml:space="preserve">
+    <value>Which corner of the tile the unread count sits in.</value>
+  </data>
+  <data name="Config.BadgeStyle" xml:space="preserve">
+    <value>Badge style</value>
+  </data>
+  <data name="Config.BadgeStyleDescription" xml:space="preserve">
+    <value>Pill and rounded square show the count on a filled badge, outline draws a coloured ring around it, and dot only shows a dot without the number.</value>
+  </data>
+  <data name="Config.BadgeSize" xml:space="preserve">
+    <value>Badge size (%)</value>
+  </data>
+  <data name="Config.BadgeSizeDescription" xml:space="preserve">
+    <value>How big the badge is compared to the standard size (100 %).</value>
+  </data>
+  <data name="Config.BadgeTextColor" xml:space="preserve">
+    <value>Badge text color</value>
+  </data>
+  <data name="Config.BadgeTextColorDescription" xml:space="preserve">
+    <value>Color of the number on the badge. White by default; an outline badge uses the badge color unless you change this.</value>
+  </data>
+  <data name="Position.TopRight" xml:space="preserve">
+    <value>Top right</value>
+  </data>
+  <data name="Position.TopLeft" xml:space="preserve">
+    <value>Top left</value>
+  </data>
+  <data name="Position.BottomRight" xml:space="preserve">
+    <value>Bottom right</value>
+  </data>
+  <data name="Position.BottomLeft" xml:space="preserve">
+    <value>Bottom left</value>
+  </data>
+  <data name="Style.Pill" xml:space="preserve">
+    <value>Pill</value>
+  </data>
+  <data name="Style.Square" xml:space="preserve">
+    <value>Rounded square</value>
+  </data>
+  <data name="Style.Outline" xml:space="preserve">
+    <value>Outline</value>
+  </data>
+  <data name="Style.Dot" xml:space="preserve">
+    <value>Dot only</value>
+  </data>
+  <data name="Describe.Label" xml:space="preserve">
+    <value>Optional text shown with the icon, for example "Work". Leave it empty for an icon-only tile. The label settings below only show once you enter a label.</value>
+  </data>
+  <data name="Describe.BackgroundColor" xml:space="preserve">
+    <value>The tile's background. Choose Transparent to let the folder background show through.</value>
+  </data>
+  <data name="Describe.LabelColor" xml:space="preserve">
+    <value>Color of the label text.</value>
+  </data>
+  <data name="Describe.AccentColor" xml:space="preserve">
+    <value>Color of the message badge. The Dock's red is used when this is not set.</value>
+  </data>
+  <data name="Describe.Font" xml:space="preserve">
+    <value>Typeface of the label text.</value>
+  </data>
+  <data name="Describe.FontSize" xml:space="preserve">
+    <value>Size of the label text, as a percentage of the tile. Needs a label to have any effect.</value>
+  </data>
+  <data name="Describe.TextAlign" xml:space="preserve">
+    <value>Moves the label to the left, centre or right.</value>
+  </data>
+  <data name="Describe.LabelPosition" xml:space="preserve">
+    <value>Puts the label above the icon, over it, or below it.</value>
+  </data>
+  <data name="Describe.Border" xml:space="preserve">
+    <value>A ring drawn around the tile.</value>
+  </data>
+  <data name="Describe.BorderStyle" xml:space="preserve">
+    <value>How the ring looks: off, a steady line, or an animation such as breathing or a running comet.</value>
+  </data>
+  <data name="Describe.BorderColor" xml:space="preserve">
+    <value>Color of the ring.</value>
+  </data>
+  <data name="Errors.OpenFailed" xml:space="preserve">
+    <value>{app} could not be opened.</value>
+    <comment>[app:string]</comment>
+  </data>
+</root>
