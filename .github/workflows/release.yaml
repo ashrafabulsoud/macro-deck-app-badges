@@ -1,0 +1,26 @@
+name: Release
+
+# Manual only while the plugin is in testing and not yet set up in the Creator Portal, so a tester release on
+# GitHub does not attempt a Store upload. Switch back to `release: types: [published]` before going to the Store.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to publish, matching a release tag such as v1.0.0
+        required: true
+      changelog:
+        description: Release notes
+        required: false
+
+jobs:
+  publish:
+    uses: Macro-Deck-App/GitHub-Actions/.github/workflows/publish-plugin.yml@v1
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      version: ${{ inputs.version }}
+      source: src/AppBadges
+      # Pinned to the SDK version; the workflow default resolves the CLI by SemVer order and can pick an older preview.
+      cli-version: 3.0.0-beta.19
+      changelog: ${{ inputs.changelog }}
