@@ -1,3 +1,4 @@
+using MacroDeck.Localization;
 using System.Text.Json;
 using AppBadges.Badges;
 using MacroDeck.Sdk.Ui;
@@ -115,9 +116,18 @@ internal sealed class BadgeWidgetSession : IUiSession
 			_openRequested = false;
 		}
 
-		if (open && _app is { } app)
+		if (!open)
+		{
+			return;
+		}
+
+		if (_app is { } app)
 		{
 			_ = OpenAsync(app, origin);
+		}
+		else
+		{
+			_ = ReportAsync(origin, Strings.Face.NotInstalled());
 		}
 	}
 
@@ -168,10 +178,25 @@ internal sealed class BadgeWidgetSession : IUiSession
 
 		_logger.Warning("Opening {App} ({Path}) failed", app.Name, app.Path);
 
-		// A hardware deck has no screen for the message; the log line above is what remains there.
-		if (origin is not null)
+		await ReportAsync(origin, Strings.Errors.OpenFailed(app.Name)).ConfigureAwait(false);
+	}
+
+	// A hardware deck has no screen for the message; the log line is what remains there.
+	private async Task ReportAsync(IUiEventOrigin? origin, LocalizedText message)
+	{
+		if (origin is null)
 		{
-			await origin.ReportFailureAsync(Strings.Errors.OpenFailed(app.Name)).ConfigureAwait(false);
+			return;
+		}
+
+		try
+		{
+			await origin.ReportFailureAsync(message).ConfigureAwait(false);
+		}
+		catch (Exception exception) when (exception is not OutOfMemoryException)
+		{
+			// The client may have gone away since the tap; nobody is left to tell.
+			_logger.Debug(exception, "Could not report a failure to the client");
 		}
 	}
 

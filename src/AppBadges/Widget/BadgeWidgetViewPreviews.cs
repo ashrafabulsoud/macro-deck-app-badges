@@ -39,7 +39,7 @@ internal static class BadgeWidgetViewPreviews
 	public static UiElement Accent() => Build(new BadgeFace(TileState.Running, "Discord", null, "8", "Gaming"),
 		"""{"label":"Gaming","accentColor":"#0a84ff","textAlign":"left"}""");
 
-	[UiPreview("Label in the centre", Profile = UiPreviewProfiles.Widget)]
+	[UiPreview("Label in the center", Profile = UiPreviewProfiles.Widget)]
 	public static UiElement Centered() => Build(new BadgeFace(TileState.Running, "Mail", null, "2", "Inbox"),
 		"""{"label":"Inbox","labelPosition":"center","fontSize":16,"labelColor":"#ffffff"}""");
 

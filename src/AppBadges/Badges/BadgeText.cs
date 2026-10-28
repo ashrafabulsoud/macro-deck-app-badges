@@ -20,6 +20,9 @@ public static class BadgeText
 			return count > MaxShown ? $"{MaxShown}+" : count.ToString(System.Globalization.CultureInfo.InvariantCulture);
 		}
 
-		return trimmed.Length <= 4 ? trimmed : trimmed[..3] + "…";
+		// Counted in text elements, so an emoji or accented letter is never cut in half.
+		var text = new System.Globalization.StringInfo(trimmed);
+
+		return text.LengthInTextElements <= 4 ? trimmed : text.SubstringByTextElements(0, 3) + "…";
 	}
 }

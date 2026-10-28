@@ -20,7 +20,7 @@ internal sealed record BadgeFace(TileState State, string Name, UiResource? Icon,
 
 	public string Initial => State != TileState.NotInstalled && Name.Length > 0 ? Name[..1].ToUpperInvariant() : "?";
 
-	/// <summary>0 for no badge, 1 for a dot, otherwise how many characters the badge holds (capped at 3).</summary>
+	/// <summary>0 for no badge, 1 for a dot, otherwise one more than the characters it holds (2 to 4).</summary>
 	public int BadgeWidth => Badge switch
 	{
 		null => 0,

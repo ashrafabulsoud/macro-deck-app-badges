@@ -77,12 +77,17 @@ public sealed class AppCatalogTests
 		Assert.That(apps, Is.Empty);
 	}
 
-	[TestCase("../../../../etc/passwd")]
+	// The targets exist, so only the name check can be what keeps them from sips.
+	[TestCase("../../../outside")]
 	[TestCase("sub/AppIcon")]
 	[TestCase("-icon")]
 	public async Task An_icon_file_name_that_leaves_the_bundle_is_never_converted(string iconFile)
 	{
 		var app = Bundle("Evil.app");
+		File.WriteAllText(Path.Combine(_root, "outside.icns"), "icns");
+		Directory.CreateDirectory(Path.Combine(app, "Contents", "Resources", "sub"));
+		File.WriteAllText(Path.Combine(app, "Contents", "Resources", "sub", "AppIcon.icns"), "icns");
+		File.WriteAllText(Path.Combine(app, "Contents", "Resources", "-icon.icns"), "icns");
 		var runner = Plists(new() { [app] = new() { ["CFBundleIconFile"] = iconFile } });
 		var catalog = new MacAppCatalog(runner, TimeProvider.System, [_root]);
 
@@ -90,6 +95,34 @@ public sealed class AppCatalogTests
 
 		Assert.That(icon, Is.Null);
 		Assert.That(runner.Calls.Select(call => call.Executable), Does.Not.Contain("/usr/bin/sips"));
+	}
+
+	[Test]
+	public async Task An_icon_inside_the_bundle_is_converted()
+	{
+		var app = Bundle("Good.app");
+		File.WriteAllText(Path.Combine(app, "Contents", "Resources", "AppIcon.icns"), "icns");
+		var runner = Plists(new() { [app] = new() { ["CFBundleIconFile"] = "AppIcon" } });
+
+		await new MacAppCatalog(runner, TimeProvider.System, [_root])
+			.GetIconPngAsync(new InstalledApp("com.example.good", "Good", app), default);
+
+		var sips = runner.Calls.Single(call => call.Executable == "/usr/bin/sips");
+		Assert.That(sips.Arguments, Does.Contain(Path.Combine(app, "Contents", "Resources", "AppIcon.icns")));
+	}
+
+	[Test]
+	public async Task A_bundle_that_cannot_be_read_does_not_hide_the_others()
+	{
+		var broken = Bundle("Broken.app");
+		var slack = Bundle("Slack.app");
+		var runner = new FakeCommandRunner((_, arguments) => arguments[^1].StartsWith(broken, StringComparison.Ordinal)
+			? throw new OperationCanceledException()
+			: FakeCommandRunner.Ok("com.tinyspeck.slackmacgap\n"));
+
+		var apps = await new MacAppCatalog(runner, TimeProvider.System, [_root]).GetAppsAsync(default);
+
+		Assert.That(apps.Select(app => app.Path), Is.EqualTo(new[] { slack }));
 	}
 
 	[Test]
@@ -141,17 +174,33 @@ public sealed class BadgeMonitorTests
 		var clock = new ManualTimeProvider();
 		using var monitor = Monitor(reader, clock);
 
+		// Only the timer drives reads here, so this also proves the timer stops.
 		monitor.Watch(Slack);
 		monitor.Watch(Slack);
 		monitor.Unwatch(Slack);
-		await monitor.PollAsync();
+		clock.Advance(BadgeMonitor.PollInterval);
 		var readsWhileWatched = reader.Reads;
 		monitor.Unwatch(Slack);
 		clock.Advance(TimeSpan.FromMinutes(1));
+
+		Assert.That(readsWhileWatched, Is.GreaterThanOrEqualTo(2));
+		Assert.That(reader.Reads, Is.EqualTo(readsWhileWatched));
+	}
+
+	[Test]
+	public async Task A_failing_tile_does_not_keep_the_others_from_the_new_badge()
+	{
+		var reader = new FakeBadgeReader();
+		using var monitor = Monitor(reader, new ManualTimeProvider());
+		var heard = 0;
+		monitor.Changed += (_, _) => throw new InvalidOperationException("tile is broken");
+		monitor.Changed += (_, _) => heard++;
+
+		reader.Set(Slack, new AppBadge(true, "3"));
+		monitor.Watch(Slack);
 		await monitor.PollAsync();
 
-		Assert.That(readsWhileWatched, Is.GreaterThan(0));
-		Assert.That(reader.Reads, Is.EqualTo(readsWhileWatched));
+		Assert.That(heard, Is.EqualTo(1));
 	}
 
 	[Test]
@@ -183,5 +232,17 @@ public sealed class ProcessCommandRunnerTests
 		Assert.That(async () => await runner.RunAsync("/bin/sleep", ["30"], TimeSpan.FromMilliseconds(200), default),
 			Throws.InstanceOf<OperationCanceledException>());
 		Assert.That(DateTime.UtcNow - started, Is.LessThan(TimeSpan.FromSeconds(10)));
+	}
+
+	[Test]
+	[Platform("MacOsX,Linux")]
+	public void A_tool_that_prints_too_much_is_stopped_without_waiting_for_the_timeout()
+	{
+		var runner = new ProcessCommandRunner();
+		var started = DateTime.UtcNow;
+
+		Assert.That(async () => await runner.RunAsync("/usr/bin/yes", [], TimeSpan.FromSeconds(60), default),
+			Throws.InstanceOf<InvalidDataException>());
+		Assert.That(DateTime.UtcNow - started, Is.LessThan(TimeSpan.FromSeconds(20)));
 	}
 }

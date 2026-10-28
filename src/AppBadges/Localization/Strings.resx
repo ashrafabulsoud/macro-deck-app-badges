@@ -62,7 +62,7 @@
     <value>Badge style</value>
   </data>
   <data name="Config.BadgeStyleDescription" xml:space="preserve">
-    <value>Pill and rounded square show the count on a filled badge, outline draws a coloured ring around it, and dot only shows a dot without the number.</value>
+    <value>Pill and rounded square show the count on a filled badge, outline draws a colored ring around it, and dot only shows a dot without the number.</value>
   </data>
   <data name="Config.BadgeSize" xml:space="preserve">
     <value>Badge size (%)</value>
@@ -101,7 +101,7 @@
     <value>Dot only</value>
   </data>
   <data name="Describe.Label" xml:space="preserve">
-    <value>Optional text shown with the icon, for example "Work". Leave it empty for an icon-only tile. The label settings below only show once you enter a label.</value>
+    <value>Optional text shown with the icon, for example "Work". Leave it empty for an icon-only tile. The label color, font and size below only take effect once you enter a label.</value>
   </data>
   <data name="Describe.BackgroundColor" xml:space="preserve">
     <value>The tile's background. Choose Transparent to let the folder background show through.</value>
@@ -119,7 +119,7 @@
     <value>Size of the label text, as a percentage of the tile. Needs a label to have any effect.</value>
   </data>
   <data name="Describe.TextAlign" xml:space="preserve">
-    <value>Moves the label to the left, centre or right.</value>
+    <value>Moves the label to the left, center or right.</value>
   </data>
   <data name="Describe.LabelPosition" xml:space="preserve">
     <value>Puts the label above the icon, over it, or below it.</value>

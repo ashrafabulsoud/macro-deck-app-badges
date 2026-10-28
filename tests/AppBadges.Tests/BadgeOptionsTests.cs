@@ -62,12 +62,15 @@ public sealed class BadgeOptionsTests
 		var section = BadgeConfigView.Described(
 			UiWidgetAppearance.Section(document.RootElement, BadgeConfigView.AppearanceFields));
 
-		var undescribed = Inputs(section.Children)
-			.Where(input => !input.Described)
-			.Select(input => input.Key)
-			.ToList();
+		var inputs = Inputs(section.Children).ToList();
 
-		Assert.That(undescribed, Is.Empty);
+		// Checking the visited keys keeps this from passing vacuously if the SDK reshapes the section.
+		Assert.That(inputs.Select(input => input.Key), Is.EquivalentTo(new[]
+		{
+			"label", "backgroundColor", "labelColor", "accentColor", "fontFaceId", "fontSize", "textAlign",
+			"labelPosition", "border", "style", "color"
+		}));
+		Assert.That(inputs.Where(input => !input.Described).Select(input => input.Key), Is.Empty);
 	}
 
 	private static IEnumerable<(string Key, bool Described)> Inputs(IEnumerable<UiElement> elements)

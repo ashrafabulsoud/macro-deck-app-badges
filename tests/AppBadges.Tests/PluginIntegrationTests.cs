@@ -87,7 +87,7 @@ public sealed class PluginIntegrationTests
 			Request(PluginIntegration.WidgetTypeLocalId, $$"""{"bundleId":"{{Slack}}"}"""), default))!;
 
 		session.Dispatch(Press(session), new FakeUiEventOrigin());
-		await Task.Delay(50);
+		await Eventually(() => _launcher.Opened.Count > 0);
 
 		Assert.That(_launcher.Opened.Single().Path, Is.EqualTo("/Applications/Slack.app"));
 	}
@@ -103,7 +103,7 @@ public sealed class PluginIntegrationTests
 		var origin = new FakeUiEventOrigin();
 
 		session.Dispatch(Press(session), origin);
-		await Task.Delay(50);
+		await Eventually(() => origin.ReportedFailures.Count > 0);
 
 		Assert.That(origin.ReportedFailures, Has.Count.EqualTo(1));
 	}
@@ -116,10 +116,32 @@ public sealed class PluginIntegrationTests
 		await using var session = (await integration.CreateSessionAsync(
 			Request(PluginIntegration.WidgetTypeLocalId, """{"bundleId":"com.example.gone"}"""), default))!;
 
-		session.Dispatch(Press(session), new FakeUiEventOrigin());
-		await Task.Delay(50);
+		var origin = new FakeUiEventOrigin();
+
+		session.Dispatch(Press(session), origin);
+		await Eventually(() => origin.ReportedFailures.Count > 0);
 
 		Assert.That(_launcher.Opened, Is.Empty);
+		Assert.That(origin.ReportedFailures, Has.Count.EqualTo(1));
+	}
+
+	[Test]
+	public async Task A_closed_tile_stops_reading_its_app()
+	{
+		await using var harness = CreateHarness();
+		var integration = await ReadyAsync(harness);
+		var monitor = harness.Services.GetRequiredService<BadgeMonitor>();
+		var session = (await integration.CreateSessionAsync(
+			Request(PluginIntegration.WidgetTypeLocalId, $$"""{"bundleId":"{{Slack}}"}"""), default))!;
+
+		await session.DisposeAsync();
+		await session.DisposeAsync();
+		var readsAfterClose = _reader.Reads;
+		_reader.Set(Slack, new AppBadge(true, "9"));
+		await monitor.PollAsync();
+
+		Assert.That(_reader.Reads, Is.EqualTo(readsAfterClose));
+		Assert.That(monitor.Current(Slack), Is.Null);
 	}
 
 	[Test]
@@ -135,6 +157,15 @@ public sealed class PluginIntegrationTests
 		await harness.Services.GetRequiredService<BadgeMonitor>().PollAsync();
 
 		Assert.That(session.DrainPatches(), Is.Not.Empty);
+	}
+
+	// The app opens on a background task; wait for its effect instead of a fixed delay.
+	private static async Task Eventually(Func<bool> condition)
+	{
+		for (var attempt = 0; attempt < 200 && !condition(); attempt++)
+		{
+			await Task.Delay(10);
+		}
 	}
 
 	private static UiEvent Press(IUiSession session) =>

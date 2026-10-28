@@ -217,7 +217,10 @@ internal static class BadgeWidgetView
 		var outline = badge.Style == BadgeOptions.Outline;
 
 		// An outline badge takes its number from the ring colour unless the user picked a text colour.
-		var textColor = outline && badge.TextColor == BadgeOptions.DefaultTextColor ? color : badge.TextColor;
+		var textColor = outline && string.Equals(badge.TextColor, BadgeOptions.DefaultTextColor,
+			StringComparison.OrdinalIgnoreCase)
+			? color
+			: badge.TextColor;
 
 		return new UiWhen
 		{
