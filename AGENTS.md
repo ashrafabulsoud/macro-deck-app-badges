@@ -16,13 +16,10 @@ data and from other apps' `Info.plist` are untrusted: bundle ids must pass `Bund
 opened only through the path the catalog found, and an icon file name must stay inside the bundle.
 
 Worked examples of every capability live in the
-[sample plugins repository](https://github.com/Macro-Deck-App/Macro-Deck-Sample-Plugins), not here.
-Read from there rather than growing this template.
+[sample plugins repository](https://github.com/Macro-Deck-App/Macro-Deck-Sample-Plugins).
 
 [README.md](README.md) is the human-facing guide: how to build, how to run against a real host, how to
-pack. This file is the rule set for writing the plugin. Read it before changing code. The template
-package itself is covered by
-[packaging/README.md](https://github.com/Macro-Deck-App/Macro-Deck-Plugin-Template/blob/main/packaging/README.md).
+pack. This file is the rule set for writing the plugin. Read it before changing code.
 
 ## Orientation
 
@@ -40,20 +37,12 @@ src/AppBadges/
   Properties/launchSettings.json   the single real-host debug profile
 tests/AppBadges.Tests/
   BadgeParsingTests.cs        lsappinfo output, badge text, bundle id validation
-  CatalogAndMonitorTests.cs   app scanning, untrusted plist values, polling rules, process timeouts
+  CatalogAndMonitorTests.cs   app scanning, untrusted plist values, polling rules, process limits
   PluginIntegrationTests.cs   sessions, taps and badge updates through the test harness
+  TileStyleTests.cs           standard appearance values, icon size, readable text on a custom background
+  BadgeOptionsTests.cs        badge position, size and style, and a description on every setting
+  Fakes.cs                    command runner, badge reader, catalog and launcher fakes
 ```
-
-The template repository carries two more directories that a generated plugin does not:
-`.template.config/` (the `dotnet new` definition) and `packaging/` (the template package project, kept
-out of the solution on purpose).
-
-`.template.config/content/` holds the *only* deliberate copies in this repository: conditional variants
-of `manifest.json` and `macrodeck-build.json`. `dotnet new` selects platforms and omits unsupplied
-optional fields with `//#if` markers, which would make the checked-in files invalid JSON and break
-`macrodeck-plugin validate`, `build` and the manifest reader. So the files under `src/` stay valid and
-the templated variants replace them during generation. **Change one, change the other**: rendering the
-template with default parameters must reproduce the `src/` files byte for byte, which CI checks.
 
 Authoritative upstream documentation, in the
 [Macro Deck 3 repository](https://github.com/Macro-Deck-App/Macro-Deck-3/tree/main/docs/plugin-development):
@@ -89,8 +78,6 @@ one change:
    `entrypoint-missing`; the second is where the generated `Strings` class lives.
 3. Replace `Assets/icon.svg`. The manifest's `icon` path is the single source of truth and the host
    reads that file directly - there is no icon code to change.
-4. Replace `LogMessageAction` with the plugin's real first action, and its keys in
-   `Localization/Strings.resx` with real ones.
 
 `MacroDeck.Plugin.Analyzers` is already referenced with `PrivateAssets="all"` - 13 compile-time
 diagnostics that catch most of the mistakes below while you type, plus the `[MacroDeckSdkUsage]`
@@ -387,11 +374,6 @@ crashes while resolving the culture; run it with `LANG=en_US.UTF-8`.
 `inventory-dependencies.py src/AppBadges/bin/publish/osx-arm64 --notices THIRD-PARTY-NOTICES --header-name "App Badges"`.
 Regenerate it after any dependency or SDK version change.
 
-Working in the template repository itself rather than in a plugin generated from it? Changing its shape
-(files, names, `.template.config/template.json`, `packaging/`) also needs a generated-project check -
-see
-[packaging/README.md](https://github.com/Macro-Deck-App/Macro-Deck-Plugin-Template/blob/main/packaging/README.md).
-
 ## Packing a plugin release
 
 ```bash
@@ -423,9 +405,6 @@ match.
 
 - Work on a branch, not directly on `main`. Use `feature/`, `fix/`, `refactor/`, `chore/`, `docs/` or
   `ci/` with a short kebab-case description, and an issue number where one exists.
-- Publishing the template package requires a pushed semantic-version tag such as
-  `v3.0.0-preview.3`. The publish workflow removes the leading `v` and uses the rest as the NuGet
-  package version. A push to `main` alone never publishes.
 - Keep changes focused; no unrelated reformatting.
 - Do not push or open a pull request unless asked.
 - Do not add AI attribution or co-author trailers.

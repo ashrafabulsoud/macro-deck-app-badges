@@ -115,7 +115,7 @@ The same settings as Macro Deck's own buttons:
 | Label | Optional text, for example *Work* to tell two Slack tiles apart. Empty means an icon-only tile. |
 | Background color | The tile color, or **Transparent** to show the folder background. Text switches to white or dark to stay readable on it. |
 | Label color, font, size (%) | Style the label. They only take effect once you type a label. |
-| Alignment | Moves the label left, centre or right. |
+| Alignment | Moves the label left, center or right. |
 | Label position | Above the icon, over it, or below it (default). |
 | Border | A ring around the tile, steady or animated. |
 
