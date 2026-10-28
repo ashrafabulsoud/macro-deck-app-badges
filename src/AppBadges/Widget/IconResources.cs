@@ -23,10 +23,7 @@ public sealed class IconResources
 		_logger = logger.ForContext<IconResources>();
 	}
 
-	/// <summary>
-	/// Uses a new registry. Macro Deck forgets resources when its session ends, so every initialization
-	/// starts with an empty cache.
-	/// </summary>
+	/// <summary>Uses the registry of a new initialization, starting from an empty cache.</summary>
 	public void Reset(IUiResourceRegistry registry)
 	{
 		lock (_sync)
@@ -57,10 +54,26 @@ public sealed class IconResources
 		}
 	}
 
+	// A failed registration (rate limited, connection dropped) is forgotten so the next tile tries again.
+	private void Forget(string bundleId, IUiResourceRegistry registry)
+	{
+		lock (_sync)
+		{
+			if (ReferenceEquals(_registry, registry))
+			{
+				_registered.Remove(bundleId);
+			}
+		}
+	}
+
 	private async Task<UiResource?> RegisterAsync(IUiResourceRegistry registry, InstalledApp app)
 	{
+		// Never completes inline, so Forget always runs after GetAsync stored this registration.
+		await Task.Yield();
+
 		try
 		{
+			// An app without an icon file stays cached as null: asking again would not find one either.
 			var png = await _catalog.GetIconPngAsync(app, CancellationToken.None).ConfigureAwait(false);
 
 			return png is null
@@ -70,6 +83,7 @@ public sealed class IconResources
 		catch (Exception exception) when (exception is not OutOfMemoryException)
 		{
 			_logger.Warning(exception, "Could not register the icon of {BundleId}", app.BundleId);
+			Forget(app.BundleId, registry);
 			return null;
 		}
 	}

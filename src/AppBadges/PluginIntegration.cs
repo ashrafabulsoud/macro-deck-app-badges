@@ -70,7 +70,7 @@ public sealed class PluginIntegration : IPluginIntegration, IWidgetTypeProvider,
 		new() { Kind = UiSurfaceKinds.Config, SessionMode = UiSessionModes.Exclusive }
 	];
 
-	/// <summary>Runs on every (re)connection: Macro Deck has forgotten registered icons by then.</summary>
+	/// <summary>Runs on every initialization, which may come with a new resource registry.</summary>
 	public Task InitializeAsync(IIntegrationContext context)
 	{
 		ArgumentNullException.ThrowIfNull(context);

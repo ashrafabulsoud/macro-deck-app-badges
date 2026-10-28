@@ -43,33 +43,39 @@ public sealed class ProcessCommandRunner : ICommandRunner
 		try
 		{
 			using var output = new MemoryStream();
-			var copy = CopyCappedAsync(process.StandardOutput.BaseStream, output, timeoutSource.Token);
-			var drainError = process.StandardError.ReadToEndAsync(timeoutSource.Token);
+			using var error = new MemoryStream();
+			var copy = CopyCappedAsync(process.StandardOutput.BaseStream, output, timeoutSource);
+			var drainError = CopyCappedAsync(process.StandardError.BaseStream, error, timeoutSource);
 			await Task.WhenAll(copy, drainError, process.WaitForExitAsync(timeoutSource.Token)).ConfigureAwait(false);
 
 			var bytes = output.ToArray();
 			return new CommandResult(process.ExitCode, System.Text.Encoding.UTF8.GetString(bytes), bytes);
 		}
-		catch (Exception exception) when (exception is OperationCanceledException or InvalidDataException)
+		finally
 		{
-			process.Kill(entireProcessTree: true);
-			throw;
+			// Whatever went wrong, a tool that is still running is not left behind.
+			if (!process.HasExited)
+			{
+				process.Kill(entireProcessTree: true);
+			}
 		}
 	}
 
-	private static async Task CopyCappedAsync(Stream source, MemoryStream target, CancellationToken cancellationToken)
+	private static async Task CopyCappedAsync(Stream source, MemoryStream target, CancellationTokenSource stop)
 	{
 		var buffer = new byte[81920];
 		int read;
 
-		while ((read = await source.ReadAsync(buffer, cancellationToken).ConfigureAwait(false)) > 0)
+		while ((read = await source.ReadAsync(buffer, stop.Token).ConfigureAwait(false)) > 0)
 		{
 			if (target.Length + read > MaxOutputBytes)
 			{
+				// Stops the wait for exit too, instead of letting it run into the full timeout.
+				await stop.CancelAsync().ConfigureAwait(false);
 				throw new InvalidDataException("The tool printed more output than expected.");
 			}
 
-			await target.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+			await target.WriteAsync(buffer.AsMemory(0, read), stop.Token).ConfigureAwait(false);
 		}
 	}
 }

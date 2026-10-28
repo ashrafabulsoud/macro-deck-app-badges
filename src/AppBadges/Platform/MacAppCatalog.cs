@@ -3,7 +3,7 @@ using AppBadges.Badges;
 
 namespace AppBadges.Platform;
 
-public sealed class MacAppCatalog : IAppCatalog, IDisposable
+public sealed class MacAppCatalog : IAppCatalog
 {
 	private const int IconSize = 256;
 
@@ -13,12 +13,13 @@ public sealed class MacAppCatalog : IAppCatalog, IDisposable
 	private readonly ICommandRunner _runner;
 	private readonly TimeProvider _time;
 	private readonly IReadOnlyList<string> _roots;
-	private readonly SemaphoreSlim _scanGate = new(1, 1);
-	// Keyed by path and modification time too, so an app update brings its new icon.
+	private readonly Lock _sync = new();
+	// Keyed by the Info.plist's modification time too, which an app update rewrites.
 	private readonly ConcurrentDictionary<(string BundleId, string Path, DateTime Modified), byte[]?> _icons = new();
 
 	private IReadOnlyList<InstalledApp>? _apps;
 	private DateTimeOffset _scannedAt;
+	private Task<IReadOnlyList<InstalledApp>>? _scan;
 
 	public MacAppCatalog(ICommandRunner runner, TimeProvider time)
 		: this(runner, time,
@@ -39,51 +40,74 @@ public sealed class MacAppCatalog : IAppCatalog, IDisposable
 
 	public async Task<IReadOnlyList<InstalledApp>> GetAppsAsync(CancellationToken cancellationToken)
 	{
-		if (_apps is { } cached && _time.GetUtcNow() - _scannedAt < _scanFor)
-		{
-			return cached;
-		}
+		Task<IReadOnlyList<InstalledApp>> scan;
 
-		await _scanGate.WaitAsync(cancellationToken).ConfigureAwait(false);
-
-		try
+		lock (_sync)
 		{
-			if (_apps is { } fresh && _time.GetUtcNow() - _scannedAt < _scanFor)
+			if (_apps is { } cached && _time.GetUtcNow() - _scannedAt < _scanFor)
 			{
-				return fresh;
+				return cached;
 			}
 
+			// One shared scan; a caller that gives up stops waiting without cancelling it for the others.
+			scan = _scan ??= ScanAsync();
+		}
+
+		return await scan.WaitAsync(cancellationToken).ConfigureAwait(false);
+	}
+
+	private async Task<IReadOnlyList<InstalledApp>> ScanAsync()
+	{
+		try
+		{
 			var apps = new Dictionary<string, InstalledApp>(StringComparer.OrdinalIgnoreCase);
 
 			foreach (var bundle in _roots.SelectMany(root => FindBundles(root, depth: 0)))
 			{
-				if (await ReadAppAsync(bundle, cancellationToken).ConfigureAwait(false) is { } app)
+				InstalledApp? app;
+
+				try
+				{
+					app = await ReadAppAsync(bundle, CancellationToken.None).ConfigureAwait(false);
+				}
+				catch (Exception exception) when (exception is not OutOfMemoryException)
+				{
+					// One unreadable bundle must not hide every other app.
+					continue;
+				}
+
+				if (app is not null)
 				{
 					// The first root wins, so /Applications beats a web-app shim of the same app in ~/Applications.
 					apps.TryAdd(app.BundleId, app);
 				}
 			}
 
-			_apps = [.. apps.Values.OrderBy(app => app.Name, StringComparer.CurrentCultureIgnoreCase)];
-			_scannedAt = _time.GetUtcNow();
-			return _apps;
+			IReadOnlyList<InstalledApp> sorted =
+				[.. apps.Values.OrderBy(app => app.Name, StringComparer.CurrentCultureIgnoreCase)];
+
+			lock (_sync)
+			{
+				_apps = sorted;
+				_scannedAt = _time.GetUtcNow();
+			}
+
+			return sorted;
 		}
 		finally
 		{
-			_scanGate.Release();
+			lock (_sync)
+			{
+				_scan = null;
+			}
 		}
-	}
-
-	public void Dispose()
-	{
-		_scanGate.Dispose();
 	}
 
 	public async Task<byte[]?> GetIconPngAsync(InstalledApp app, CancellationToken cancellationToken)
 	{
 		ArgumentNullException.ThrowIfNull(app);
 
-		var key = (app.BundleId, app.Path, Directory.GetLastWriteTimeUtc(app.Path));
+		var key = (app.BundleId, app.Path, File.GetLastWriteTimeUtc(Path.Combine(app.Path, "Contents", "Info.plist")));
 
 		if (_icons.TryGetValue(key, out var cached))
 		{
